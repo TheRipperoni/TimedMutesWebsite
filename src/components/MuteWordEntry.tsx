@@ -1,4 +1,4 @@
-import {Box, Button, Typography} from "@mui/material";
+import {Box, Button, Card, CardContent, Typography} from "@mui/material";
 
 function callUnMute(word: string, setRefresh: (v: number) => void) {
   const requestOptions = {
@@ -30,13 +30,26 @@ export const MuteWordEntry = (
   const t = new Date(0);
   t.setUTCSeconds(entry.expiration_date);
   return (
-    <Box p={1} m={1} bgcolor={'#9e9e9e'}>
-      <Typography>{entry.muted_word}</Typography>
-      <Button
-        variant={'contained'}
-        onClick={() => callUnMute(entry.muted_word, setRefresh)}
-      >Unmute</Button>
-      <Typography>Expires at: {t.toLocaleString()}</Typography>
-    </Box>
+    <Card sx={{minWidth: 200, height: '100%', display: 'flex', flexDirection: 'column'}}>
+      <CardContent sx={{flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 1}}>
+        <Typography variant="h6" sx={{wordBreak: 'break-all'}}>
+          {entry.muted_word}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Expires: {t.toLocaleString()}
+        </Typography>
+        <Box sx={{mt: 'auto', pt: 2}}>
+          <Button
+            fullWidth
+            variant="outlined"
+            color="error"
+            size="small"
+            onClick={() => callUnMute(entry.muted_word, setRefresh)}
+          >
+            Unmute
+          </Button>
+        </Box>
+      </CardContent>
+    </Card>
   )
 }

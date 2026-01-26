@@ -4,10 +4,13 @@ import axios from "axios";
 import {BskyAgent} from "@atproto/api";
 import {getAgentLogin} from "./agent.ts";
 import {
+  Box,
   Button,
-  FormControl,
+  Container,
+  Paper,
   TextField,
-  Typography
+  Typography,
+  Link
 } from "@mui/material";
 
 function Login({
@@ -38,13 +41,13 @@ function Login({
 
     // Check if the user has entered both fields correctly
     if ("" === email) {
-      setEmailError("Please enter your email")
+      setEmailError("Please enter your handle")
       return
     }
 
 
     if ("" === password) {
-      setPasswordError("Please enter a password")
+      setPasswordError("Please enter your app password")
       return
     }
 
@@ -99,28 +102,68 @@ function Login({
   }
 
   return (
-    <FormControl margin={'normal'} sx={{
-      justifyContent: 'center',
-      alignItems: 'center',
-      width: '100%',
-      m: 2,
-    }}>
-      <Typography sx={{m:'1px'}} variant={"h4"} component={"h1"}>Login</Typography>
-      <TextField
-        sx={{m:'1px'}}
-        value={email}
-        placeholder="Enter your handle here"
-        onChange={ev => setEmail2(ev.target.value)}/>
-      <Typography sx={{m:'1px'}}>{emailError}</Typography>
-      <TextField
-        sx={{m:'1px'}}
-        value={password}
-        type="password"
-        placeholder="Enter your password here"
-        onChange={ev => setPassword(ev.target.value)}/>
-      <Typography sx={{m:'1px'}}>{passwordError}</Typography>
-      <Button sx={{m:'1px'}} variant={'contained'} onClick={onButtonClick}>Log in</Button>
-    </FormControl>
+    <Container maxWidth="xs">
+      <Box sx={{mt: 8, mb: 4, textAlign: 'center'}}>
+        <Paper elevation={0}
+               sx={{p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 2}}>
+          <Typography variant="h4" component="h1" gutterBottom sx={{fontWeight: 700}}>
+            Login
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{mb: 4}}>
+            Please use your Bluesky handle and an <strong>App Password</strong>.
+          </Typography>
+
+          <Box component="form" noValidate
+               sx={{mt: 1, display: 'flex', flexDirection: 'column', gap: 2}}>
+            <TextField
+              fullWidth
+              label="Handle"
+              variant="outlined"
+              value={email}
+              placeholder="e.g. handle.bsky.social"
+              error={!!emailError}
+              helperText={emailError}
+              onChange={ev => setEmail2(ev.target.value)}
+            />
+            <TextField
+              fullWidth
+              label="App Password"
+              variant="outlined"
+              type="password"
+              value={password}
+              error={!!passwordError}
+              helperText={passwordError}
+              onChange={ev => setPassword(ev.target.value)}
+            />
+
+            <Button
+              fullWidth
+              variant="contained"
+              size="large"
+              sx={{mt: 2}}
+              onClick={onButtonClick}
+            >
+              Log In
+            </Button>
+
+            <Typography variant="caption" color="text.secondary" sx={{mt: 2}}>
+              We recommend using an App Password for security. You can create one in your Bluesky
+              settings.
+            </Typography>
+
+            <Link
+              href="https://bsky.app/settings/app-passwords"
+              target="_blank"
+              rel="noopener"
+              variant="caption"
+              sx={{textDecoration: 'none'}}
+            >
+              Manage App Passwords
+            </Link>
+          </Box>
+        </Paper>
+      </Box>
+    </Container>
   );
 }
 

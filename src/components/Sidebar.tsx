@@ -17,14 +17,42 @@ const Sidebar = ({
   setHandlename: (v: string) => void,
 }) => {
   return (
-    <Box height={'80px'} width={'100%'} display={'flex'} alignItems={'center'} gap={4} p={2}
-         sx={{
-           background: '#272727'
-         }}>
-      <Typography variant={"h4"} component={"h1"} color={"white"}>BSky Tool</Typography>
-      <AccountButton loggedIn={loggedIn} setLoggedIn={setLoggedIn} setPfpUrl={setPfpUrl} setHandlename={setHandlename}/>
-      <Typography>{handleName}</Typography>
-      <Avatar alt="pfp" src={pfpUrl} sx={{marginRight: 'auto'}}/>
+    <Box
+      component="header"
+      sx={{
+        height: '64px',
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        px: 3,
+        bgcolor: 'background.paper',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        gap: 2
+      }}
+    >
+      <Typography variant="h6" component="h1"
+                  sx={{fontWeight: 700, color: 'primary.main', flexGrow: 0}}>
+        Timed Mutes
+      </Typography>
+
+      <Box sx={{flexGrow: 1}}/>
+
+      {loggedIn && (
+        <Box sx={{display: 'flex', alignItems: 'center', gap: 1.5}}>
+          <Typography variant="body2" sx={{color: 'text.secondary'}}>
+            {handleName}
+          </Typography>
+          <Avatar
+            alt={handleName}
+            src={pfpUrl}
+            sx={{width: 32, height: 32, border: '1px solid', borderColor: 'divider'}}
+          />
+        </Box>
+      )}
+
+      <AccountButton loggedIn={loggedIn} setLoggedIn={setLoggedIn} setPfpUrl={setPfpUrl}
+                     setHandlename={setHandlename}/>
     </Box>
   );
 };

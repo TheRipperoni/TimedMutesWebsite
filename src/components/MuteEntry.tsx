@@ -1,5 +1,5 @@
 import {ProfileViewDetailed} from "@atproto/api/dist/client/types/app/bsky/actor/defs";
-import {Avatar, Box, Button, Typography} from "@mui/material";
+import {Avatar, Box, Button, Card, CardContent, Typography} from "@mui/material";
 
 function callUnMute(actor: string, expiration_time: number, setRefresh: (v: number) => void) {
   const requestOptions = {
@@ -33,14 +33,37 @@ export const MuteEntry = (
   const t = new Date(0);
   t.setUTCSeconds(entry.expiration_date);
   return (
-    <Box p={1} m={1} bgcolor={'#9e9e9e'}>
-      <Avatar src={entry.profile.avatar}/>
-      <Typography>{entry.profile.handle}</Typography>
-      <Button
-        variant={'contained'}
-        onClick={() => callUnMute(entry.muted_actor, entry.expiration_date, setRefresh)}
-      >Unmute</Button>
-      <Typography>Expires at: {t.toLocaleString()}</Typography>
-    </Box>
+    <Card sx={{minWidth: 240, height: '100%', display: 'flex', flexDirection: 'column'}}>
+      <CardContent sx={{
+        flexGrow: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        textAlign: 'center',
+        gap: 1
+      }}>
+        <Avatar src={entry.profile.avatar} sx={{width: 56, height: 56, mb: 1}}/>
+        <Typography variant="subtitle1" sx={{fontWeight: 600, lineHeight: 1.2}}>
+          {entry.profile.displayName || entry.profile.handle}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{mb: 1}}>
+          @{entry.profile.handle}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Expires: {t.toLocaleString()}
+        </Typography>
+        <Box sx={{mt: 'auto', pt: 2, width: '100%'}}>
+          <Button
+            fullWidth
+            variant="outlined"
+            color="error"
+            size="small"
+            onClick={() => callUnMute(entry.muted_actor, entry.expiration_date, setRefresh)}
+          >
+            Unmute
+          </Button>
+        </Box>
+      </CardContent>
+    </Card>
   )
 }
