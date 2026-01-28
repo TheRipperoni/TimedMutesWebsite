@@ -3,11 +3,12 @@ import {MuteEntry} from "./components/MuteEntry.tsx";
 import {BskyAgent} from "@atproto/api";
 import SetMute from "./setmute.tsx";
 import {ProfileViewDetailed} from "@atproto/api/dist/client/types/app/bsky/actor/defs";
-import {Box, Container, Divider, Grid, Typography} from "@mui/material";
+import {Box, Button, Container, Divider, Grid, Typography} from "@mui/material";
 import {TimedMuteVo} from "./timedMuteVo.ts";
 import SetWordMute from "./setwordmute.tsx";
 import {MuteWordEntry} from "./components/MuteWordEntry.tsx";
 import {TimedMuteWordVo} from "./timedMuteWordVo.ts";
+import {useNavigate} from "react-router-dom";
 
 const MuteEntries = ({
   agent,
@@ -180,6 +181,8 @@ const Home = ({
   muteWords: TimedMuteWordVo[]
   setMuteWords: (v: TimedMuteWordVo[]) => void
 }) => {
+  const navigate = useNavigate();
+
   if (!loggedIn) {
     return (
       <Container maxWidth="md" sx={{py: 10, textAlign: 'center'}}>
@@ -190,6 +193,14 @@ const Home = ({
           Take a break from certain users or topics. Set a timer and we'll handle the unmuting for
           you.
         </Typography>
+        <Button
+          variant="contained"
+          size="large"
+          onClick={() => navigate(import.meta.env.VITE_BASE_PATH + "/login")}
+          sx={{px: 4, py: 1.5, fontSize: '1.1rem', fontWeight: 600}}
+        >
+          Get Started
+        </Button>
       </Container>
     )
   }

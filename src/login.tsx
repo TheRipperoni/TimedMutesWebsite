@@ -2,7 +2,7 @@ import {useState} from "react";
 import {useNavigate} from "react-router-dom";
 import axios from "axios";
 import {BskyAgent} from "@atproto/api";
-import {getAgentLogin} from "./agent.ts";
+import {getAgentLogin, oauthClient} from "./agent.ts";
 import {
   Box,
   Button,
@@ -10,8 +10,10 @@ import {
   Paper,
   TextField,
   Typography,
-  Link
+  Link,
+  Divider
 } from "@mui/material";
+import {SiBluesky} from "react-icons/si";
 
 function Login({
   setLoggedIn,
@@ -101,6 +103,22 @@ function Login({
     });
   }
 
+  const onOAuthClick = async () => {
+    try {
+      if ("" === email) {
+        // If email is empty, we might want to prompt for a handle if it's required for some OAuth flows,
+        // but typically ATProto OAuth starts with a handle to resolve the PDS.
+        // Some implementations allow starting without it if the client is restricted to one service.
+        await oauthClient.signIn("https://bsky.social");
+      } else {
+        await oauthClient.signIn(email);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to initiate OAuth login");
+    }
+  }
+
   return (
     <Container maxWidth="xs">
       <Box sx={{mt: 8, mb: 4, textAlign: 'center'}}>
@@ -110,11 +128,36 @@ function Login({
             Login
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{mb: 4}}>
-            Please use your Bluesky handle and an <strong>App Password</strong>.
+            Sign in with your Bluesky account.
           </Typography>
 
           <Box component="form" noValidate
                sx={{mt: 1, display: 'flex', flexDirection: 'column', gap: 2}}>
+
+            <Button
+              fullWidth
+              variant="contained"
+              size="large"
+              startIcon={<SiBluesky/>}
+              onClick={onOAuthClick}
+              sx={{
+                backgroundColor: '#0085ff',
+                '&:hover': {
+                  backgroundColor: '#0074e0',
+                },
+                textTransform: 'none',
+                fontWeight: 600
+              }}
+            >
+              Sign in with Bluesky
+            </Button>
+
+            <Divider sx={{my: 2}}>
+              <Typography variant="body2" color="text.secondary">
+                or use an App Password
+              </Typography>
+            </Divider>
+
             <TextField
               fullWidth
               label="Handle"
@@ -138,12 +181,12 @@ function Login({
 
             <Button
               fullWidth
-              variant="contained"
+              variant="outlined"
               size="large"
-              sx={{mt: 2}}
+              sx={{mt: 1}}
               onClick={onButtonClick}
             >
-              Log In
+              Log In with App Password
             </Button>
 
             <Typography variant="caption" color="text.secondary" sx={{mt: 2}}>

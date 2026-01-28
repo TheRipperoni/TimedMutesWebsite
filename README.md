@@ -81,6 +81,51 @@ The following environment variables are used by the application:
 └── vite.config.ts       # Vite configuration
 ```
 
+## Deployment
+
+This project can be deployed in several ways:
+
+### Docker
+
+You can build a Docker image and run it on your server.
+
+1. **Build the image**:
+   ```bash
+   docker build \
+     --build-arg VITE_API_HOST=https://mutes.ripperoni.com/api \
+     --build-arg VITE_BASE_PATH=/ui \
+     -t timed-mutes-website .
+   ```
+
+2. **Run the container**:
+   ```bash
+   docker run -d -p 8080:80 timed-mutes-website
+   ```
+   The app will be available at `http://localhost:8080/ui`.
+
+### GitHub Actions
+
+A CI/CD workflow is provided in `.github/workflows/deploy.yml`. It automatically builds the project on every push to `main` or `master`.
+
+To enable automatic deployment:
+1. Go to your GitHub repository settings.
+2. Add the following secrets:
+   - `VITE_API_HOST`: Your backend API host.
+   - `SSH_PRIVATE_KEY`: Private key to access your server.
+   - `SSH_HOST`: Your server's IP or domain.
+   - `SSH_USER`: The username for the server.
+   - `REMOTE_DIR`: The path on the server where the files should be uploaded.
+3. Uncomment the "Deploy to Server" step in `.github/workflows/deploy.yml`.
+
+### Manual Deployment
+
+1. **Build the project**:
+   ```bash
+   yarn build
+   ```
+2. **Copy the `dist` folder** to your web server (e.g., Nginx, Apache).
+   Ensure your server is configured to serve the files from the base path (default is `/ui`) and redirects all requests to `index.html` for React Router compatibility.
+
 ## Tests
 
 TODO: Add testing framework and write tests. Currently, there are no automated tests configured in this repository.

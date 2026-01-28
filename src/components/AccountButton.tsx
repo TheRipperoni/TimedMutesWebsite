@@ -30,6 +30,9 @@ const AccountButton = ({
           setHandlename("");
           navigate(import.meta.env.VITE_BASE_PATH + "/login")
         });
+      
+      // Also try to logout from OAuth if applicable
+      // oauthClient.logout() could be called here if we tracked it
     } else {
       navigate(import.meta.env.VITE_BASE_PATH + "/login")
     }

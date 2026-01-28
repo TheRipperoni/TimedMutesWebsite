@@ -1,5 +1,5 @@
 import { SidebarData } from '../components/SidebarData';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 describe('SidebarData', () => {
   it('contains Home link with correct path', () => {
