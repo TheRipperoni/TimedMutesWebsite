@@ -1,11 +1,14 @@
 import {
+  Alert,
   Box,
   Button,
+  CircularProgress,
   FormControl,
   FormControlLabel,
   FormLabel,
   Radio,
   RadioGroup,
+  Snackbar,
   TextField, Typography
 } from "@mui/material";
 import {useState} from "react";
@@ -17,8 +20,12 @@ const SetWordMute = ({setRefresh}: { setRefresh: (v: number) => void }) => {
   const ONE_MONTH = 2629743
   const [muteWord, setMuteWord] = useState("")
   const [expireLength, setExpireLength] = useState(ONE_DAY)
+  const [loading, setLoading] = useState(false)
+  const [snackbarOpen, setSnackbarOpen] = useState(false)
+  const [snackbarMessage, setSnackbarMessage] = useState("")
 
   const onButtonClick = () => {
+    setLoading(true)
     const requestOptions = {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -31,14 +38,25 @@ const SetWordMute = ({setRefresh}: { setRefresh: (v: number) => void }) => {
       .then(response => {
         if (response.status == 200) {
           setRefresh(Math.random())
+          setMuteWord("")
+          setLoading(false)
+          const durationLabel = expireLength === ONE_DAY ? "24 hours" : expireLength === ONE_WEEK ? "7 days" : "30 days"
+          setSnackbarMessage(`Word muted for ${durationLabel}`)
+          setSnackbarOpen(true)
           return response
         } else {
           response.json().then((data) => {
             alert(data['error'])
+            setLoading(false)
           }).catch(() => {
             alert('Unexpected error submitting')
+            setLoading(false)
           })
         }
+      }).catch((err) => {
+        console.error('Failed to submit word mute:', err);
+        alert('Network error submitting word mute');
+        setLoading(false)
       });
   }
 
@@ -102,11 +120,22 @@ const SetWordMute = ({setRefresh}: { setRefresh: (v: number) => void }) => {
           type="submit"
           variant="contained"
           size="large"
+          disabled={loading}
           onClick={() => onButtonClick()}
         >
-          Mute Word
+          {loading ? <CircularProgress size={24} color="inherit"/> : "Mute Word"}
         </Button>
       </FormControl>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
+      >
+        <Alert severity="success" onClose={() => setSnackbarOpen(false)} variant="filled">
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

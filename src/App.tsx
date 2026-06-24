@@ -20,16 +20,34 @@ function App() {
 
   useEffect(() => {
     // Initial OAuth setup
-    oauthClient.init().then((res) => {
+    oauthClient.init().then(async (res) => {
       if (res?.session) {
-        const agent = new BskyAgent(res.session as any);
+        const oauthSession = res.session;
+        // getTokenSet() is protected in TypeScript but the JS runtime allows it
+        const tokenSet = await (oauthSession as any).getTokenSet();
+
+        // Use the PDS URL (aud) as the service for the agent
+        const agent = new BskyAgent({service: tokenSet.aud || 'https://bsky.social'});
+
+        // Set the OAuth tokens as the agent session data
+        agent.session = {
+          accessJwt: tokenSet.access_token,
+          refreshJwt: tokenSet.refresh_token || '',
+          handle: oauthSession.sub,
+          did: oauthSession.sub,
+          active: true,
+        };
+
         setAgent(agent);
         setLoggedIn(true);
-        agent.getProfile({actor: res.session.did}).then((profile) => {
+
+        agent.getProfile({actor: oauthSession.sub}).then((profile) => {
           if (profile.success) {
             setHandlename(profile.data.handle);
             setPfpUrl(profile.data.avatar || "");
           }
+        }).catch((err) => {
+          console.error('Failed to fetch profile after OAuth init:', err);
         });
         
         // If we just finished a login, we might want to clear the URL parameters
@@ -65,17 +83,24 @@ function App() {
                   if (res.success) {
                     setPfpUrl(res.data.avatar || "");
                   }
-                })
+                }).catch((err) => {
+                  console.error('Failed to fetch profile after session resume:', err);
+                });
               }
             })
           }
           )
+        } else {
+          console.warn('Session check returned status ' + response.status + ' — user is not logged in on the backend.');
         }
+      }).catch((err) => {
+        console.error('Failed to check active session:', err);
       });
   }, [])
 
   const home_path = import.meta.env.VITE_BASE_PATH
   const login_path = import.meta.env.VITE_BASE_PATH + "/login"
+  const oauth_callback_path = import.meta.env.VITE_BASE_PATH + "/oauth/callback"
 
   return (
     <BrowserRouter>
@@ -89,6 +114,10 @@ function App() {
         <Route path={login_path}
                element={<Login setLoggedIn={setLoggedIn} setEmail={setEmail} setAgent={setAgent}
                                setHandlename={setHandlename} setPfpUrl={setPfpUrl}/>}/>
+        <Route path={oauth_callback_path}
+               element={<Home loggedIn={loggedIn} agent={agent} muteWords={muteWords}
+                              setMuteWords={setMuteWords} data={data} setData={setData}
+                              refresh={refresh} setRefresh={setRefresh}/>}/>
       </Routes>
     </BrowserRouter>
   );

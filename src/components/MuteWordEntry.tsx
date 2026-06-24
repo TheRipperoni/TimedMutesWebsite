@@ -1,19 +1,19 @@
-import {Box, Button, Card, CardContent, Typography} from "@mui/material";
-
-function callUnMute(word: string, setRefresh: (v: number) => void) {
-  const requestOptions = {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({muted_word: word})
-  };
-  fetch(import.meta.env.VITE_API_HOST + '/deleteTimedMuteWord', requestOptions)
-    .then(response => {
-      if (response.status == 200) {
-        setRefresh(Math.random())
-      }
-      return response
-    });
-}
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Snackbar,
+  Typography
+} from "@mui/material";
+import {useState} from "react";
 
 export const MuteWordEntry = (
   {
@@ -27,8 +27,40 @@ export const MuteWordEntry = (
     },
     setRefresh: (v: number) => void
   }) => {
+  const [loading, setLoading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const t = new Date(0);
   t.setUTCSeconds(entry.expiration_date);
+
+  const handleUnmute = () => {
+    setDialogOpen(true);
+  };
+
+  const confirmUnmute = () => {
+    setDialogOpen(false);
+    setLoading(true);
+    const requestOptions = {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({muted_word: entry.muted_word})
+    };
+    fetch(import.meta.env.VITE_API_HOST + '/deleteTimedMuteWord', requestOptions)
+      .then(response => {
+        if (response.status == 200) {
+          setRefresh(Math.random())
+          setLoading(false)
+          setSnackbarOpen(true)
+        } else {
+          console.warn('Failed to unmute word: status ' + response.status);
+          setLoading(false)
+        }
+      }).catch((err) => {
+        console.error('Failed to unmute word:', err);
+        setLoading(false)
+      });
+  };
+
   return (
     <Card sx={{minWidth: 200, height: '100%', display: 'flex', flexDirection: 'column'}}>
       <CardContent sx={{flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 1}}>
@@ -44,12 +76,38 @@ export const MuteWordEntry = (
             variant="outlined"
             color="error"
             size="small"
-            onClick={() => callUnMute(entry.muted_word, setRefresh)}
+            disabled={loading}
+            onClick={handleUnmute}
           >
-            Unmute
+            {loading ? <CircularProgress size={20} color="inherit"/> : "Unmute"}
           </Button>
         </Box>
       </CardContent>
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+      >
+        <DialogTitle>Confirm Unmute</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to unmute the word "{entry.muted_word}"?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <Button onClick={confirmUnmute} color="error" variant="contained">Unmute</Button>
+        </DialogActions>
+      </Dialog>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
+      >
+        <Alert severity="success" onClose={() => setSnackbarOpen(false)} variant="filled">
+          Word unmuted
+        </Alert>
+      </Snackbar>
     </Card>
   )
 }

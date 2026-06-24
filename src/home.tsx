@@ -1,14 +1,14 @@
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
+import {useNavigate} from "react-router-dom";
 import {MuteEntry} from "./components/MuteEntry.tsx";
 import {BskyAgent} from "@atproto/api";
 import SetMute from "./setmute.tsx";
 import {ProfileViewDetailed} from "@atproto/api/dist/client/types/app/bsky/actor/defs";
-import {Box, Button, Container, Divider, Grid, Typography} from "@mui/material";
+import {Box, Button, CircularProgress, Container, Divider, Grid, Typography} from "@mui/material";
 import {TimedMuteVo} from "./timedMuteVo.ts";
 import SetWordMute from "./setwordmute.tsx";
 import {MuteWordEntry} from "./components/MuteWordEntry.tsx";
 import {TimedMuteWordVo} from "./timedMuteWordVo.ts";
-import {useNavigate} from "react-router-dom";
 
 const MuteEntries = ({
   agent,
@@ -23,11 +23,12 @@ const MuteEntries = ({
   refresh: number
   setRefresh: (v: number) => void
 }) => {
-  // const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   useEffect(() => {
     if (agent === undefined) {
       return
     }
+    setLoading(true);
     const requestOptions = {
       method: 'GET',
       headers: {'Content-Type': 'application/json'},
@@ -38,6 +39,7 @@ const MuteEntries = ({
           response.json().then(value => {
             if (value.length === 0) {
               setData([])
+              setLoading(false);
               return
             }
             const did_list = new Set<string>();
@@ -55,12 +57,27 @@ const MuteEntries = ({
                   mute['profile'] = profileMap.get(mute['muted_actor'])
                 }
                 setData(mutes)
+                setLoading(false);
               }
             )
           })
+        } else {
+          console.warn('Failed to fetch timed mutes: status ' + response.status);
+          setLoading(false);
         }
+      }).catch((err) => {
+        console.error('Failed to fetch timed mutes:', err);
+        setLoading(false);
       });
   }, [agent, setData, setRefresh, refresh]);
+
+  if (loading) {
+    return (
+      <Box sx={{py: 4, textAlign: 'center'}}>
+        <CircularProgress size={32}/>
+      </Box>
+    )
+  }
 
   if (data.length === 0) {
     return (
@@ -110,11 +127,12 @@ const MuteWordEntries = ({
   refresh: number
   setRefresh: (v: number) => void
 }) => {
-  // const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   useEffect(() => {
     if (agent === undefined) {
       return
     }
+    setLoading(true);
     const requestOptions = {
       method: 'GET',
       headers: {'Content-Type': 'application/json'},
@@ -124,10 +142,25 @@ const MuteWordEntries = ({
         if (response.status == 200) {
           response.json().then(value => {
             setData(value);
+            setLoading(false);
           })
+        } else {
+          console.warn('Failed to fetch timed mute words: status ' + response.status);
+          setLoading(false);
         }
+      }).catch((err) => {
+        console.error('Failed to fetch timed mute words:', err);
+        setLoading(false);
       });
   }, [agent, setData, setRefresh, refresh]);
+
+  if (loading) {
+    return (
+      <Box sx={{py: 4, textAlign: 'center'}}>
+        <CircularProgress size={32}/>
+      </Box>
+    )
+  }
 
   if (data.length === 0) {
     return (

@@ -52,11 +52,11 @@ The following environment variables are used by the application:
 
 | Variable | Description | Example |
 | :--- | :--- | :--- |
-| `VITE_API_HOST` | Backend API host for mute management | `https://mutes.ripperoni.com/api` |
+| `VITE_API_HOST` | Backend API host for mute management | `https://mutes.ripperoni.app/api` |
 | `VITE_API_OZONE_HOST` | API host for Ozone integration | `https://ozoneswarm.ripperoni.com/api` |
 | `VITE_BASE_PATH` | Base path for the React Router | `/ui` |
-| `VITE_OAUTH_CLIENT_ID` | OAuth Client ID or metadata URL | `mutes.ripperoni.com` |
-| `VITE_OAUTH_REDIRECT_URI` | OAuth redirect URI | `https://mutes.ripperoni.com/ui/oauth/callback` |
+| `VITE_OAUTH_CLIENT_ID` | OAuth Client ID or metadata URL | `mutes.ripperoni.app` |
+| `VITE_OAUTH_REDIRECT_URI` | OAuth redirect URI | `https://mutes.ripperoni.app/ui/oauth/callback` |
 | `VITE_OAUTH_SCOPE` | Requested OAuth scopes | `atproto transition:generic` |
 
 ## Project Structure
@@ -85,15 +85,67 @@ The following environment variables are used by the application:
 
 This project can be deployed in several ways:
 
-### Docker
+### Quick Deploy Script (Production)
 
-You can build a Docker image and run it on your server.
+The easiest way to deploy is using the `deploy.sh` script, which:
+1. Rsyncs the project source to the server
+2. Builds the Docker image on the server with production environment variables
+3. Runs the container on port `3001`
+4. Updates the **Caddy** reverse-proxy config on the server for `mutes.ripperoni.app` (only the `mutes` block — other services are left untouched) and reloads Caddy
+
+Run from the project root:
+
+```bash
+./deploy.sh
+```
+
+The script embeds the SSH private key and connects as `ubuntu@158.69.219.229`.  
+The app is served at **https://mutes.ripperoni.app/ui/**. 
+
+### Cloudflare DNS Setup
+
+`mutes.ripperoni.app` is proxied through Cloudflare. The DNS record points to `158.69.219.229` with Cloudflare proxy (orange cloud) enabled.
+
+**Initial setup / certificate renewal:** If the TLS certificate needs to be obtained for the first time (e.g., after a fresh server build), Cloudflare proxy must be temporarily disabled so Let's Encrypt / ZeroSSL can validate the domain via HTTP-01 challenge. After the certificate is obtained, re-enable proxy.
+
+1. Disable proxy: `proxied: false` on the `mutes.ripperoni.app` A record
+2. Restart the Caddy container on the server: `docker restart caddy`
+3. Wait ~25s for certificate acquisition
+4. Re-enable proxy: `proxied: true`
+
+A `CLOUDFLARE_DNS_TOKEN` is stored in `~/.zshrc` (locally) for API access to update the record.
+
+### Production Server Setup
+
+The production server (`158.69.219.229`) runs the following reverse-proxy and service architecture:
+
+- **Caddy** (Docker container, `network_mode: host`) — terminates TLS and reverse-proxies requests to backend containers. Its config lives at `/ozone/caddy/etc/caddy/Caddyfile`.
+- The **timed-mutes-website** container runs on port `3001` internally and is proxied by Caddy.
+- Other services on the server follow the same pattern. Port assignments:
+  - `pronounpickerozone.ripperoni.com` → port `3000` (ozone)
+  - `followingstats.ripperoni.com` → port `8002` (stats-viz)
+  - `following.ripperoni.com` / `follow.ripperoni.com` → port `8003` (feedgen)
+
+> **Important**: The deploy script's `update_caddy()` function targets **only** the `mutes.ripperoni.app` block in the Caddyfile. It will not modify other service entries.
+
+### Vite `base` Configuration
+
+The `vite.config.ts` must set `base: '/ui/'` so that built assets are referenced with the `/ui/` prefix (e.g., `/ui/assets/index-xxx.js`). This is required because the nginx server serves the app under the `/ui` path.
+
+The `client-metadata.json` must reside at `public/client-metadata.json` (not `public/ui/client-metadata.json`), because Vite resolves `public/` paths relative to the configured `base` path. With `base: '/ui/'`, `public/client-metadata.json` becomes available at `/ui/client-metadata.json`.
+
+### Docker (Standalone)
+
+You can build a Docker image and run it locally:
 
 1. **Build the image**:
    ```bash
    docker build \
-     --build-arg VITE_API_HOST=https://mutes.ripperoni.com/api \
+     --build-arg VITE_API_HOST=https://mutes.ripperoni.app/api \
      --build-arg VITE_BASE_PATH=/ui \
+     --build-arg VITE_OAUTH_CLIENT_ID='https://mutes.ripperoni.app/ui/client-metadata.json' \
+     --build-arg VITE_OAUTH_REDIRECT_URI='https://mutes.ripperoni.app/ui/oauth/callback' \
+     --build-arg VITE_OAUTH_SCOPE='atproto transition:generic' \
      -t timed-mutes-website .
    ```
 
@@ -123,7 +175,7 @@ To enable automatic deployment:
    ```bash
    yarn build
    ```
-2. **Copy the `dist` folder** to your web server (e.g., Nginx, Apache).
+2. **Copy the `dist` folder** to your web server (e.g., Nginx, Apache, or Caddy).
    Ensure your server is configured to serve the files from the base path (default is `/ui`) and redirects all requests to `index.html` for React Router compatibility.
 
 ## Tests

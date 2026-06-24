@@ -1,20 +1,21 @@
 import {ProfileViewDetailed} from "@atproto/api/dist/client/types/app/bsky/actor/defs";
-import {Avatar, Box, Button, Card, CardContent, Typography} from "@mui/material";
-
-function callUnMute(actor: string, expiration_time: number, setRefresh: (v: number) => void) {
-  const requestOptions = {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({muted_actor_did: actor, expiration_date: expiration_time})
-  };
-  fetch(import.meta.env.VITE_API_HOST + '/deleteTimedMute', requestOptions)
-    .then(response => {
-      if (response.status == 200) {
-        setRefresh(Math.random())
-      }
-      return response
-    });
-}
+import {
+  Alert,
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Snackbar,
+  Typography
+} from "@mui/material";
+import {useState} from "react";
 
 export const MuteEntry = (
   {
@@ -30,8 +31,40 @@ export const MuteEntry = (
     },
     setRefresh: (v: number) => void
   }) => {
+  const [loading, setLoading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const t = new Date(0);
   t.setUTCSeconds(entry.expiration_date);
+
+  const handleUnmute = () => {
+    setDialogOpen(true);
+  };
+
+  const confirmUnmute = () => {
+    setDialogOpen(false);
+    setLoading(true);
+    const requestOptions = {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({muted_actor_did: entry.muted_actor, expiration_date: entry.expiration_date})
+    };
+    fetch(import.meta.env.VITE_API_HOST + '/deleteTimedMute', requestOptions)
+      .then(response => {
+        if (response.status == 200) {
+          setRefresh(Math.random())
+          setLoading(false)
+          setSnackbarOpen(true)
+        } else {
+          console.warn('Failed to unmute: status ' + response.status);
+          setLoading(false)
+        }
+      }).catch((err) => {
+        console.error('Failed to unmute:', err);
+        setLoading(false)
+      });
+  };
+
   return (
     <Card sx={{minWidth: 240, height: '100%', display: 'flex', flexDirection: 'column'}}>
       <CardContent sx={{
@@ -58,12 +91,38 @@ export const MuteEntry = (
             variant="outlined"
             color="error"
             size="small"
-            onClick={() => callUnMute(entry.muted_actor, entry.expiration_date, setRefresh)}
+            disabled={loading}
+            onClick={handleUnmute}
           >
-            Unmute
+            {loading ? <CircularProgress size={20} color="inherit"/> : "Unmute"}
           </Button>
         </Box>
       </CardContent>
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+      >
+        <DialogTitle>Confirm Unmute</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to unmute {entry.profile.displayName || entry.profile.handle}?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <Button onClick={confirmUnmute} color="error" variant="contained">Unmute</Button>
+        </DialogActions>
+      </Dialog>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
+      >
+        <Alert severity="success" onClose={() => setSnackbarOpen(false)} variant="filled">
+          User unmuted
+        </Alert>
+      </Snackbar>
     </Card>
   )
 }

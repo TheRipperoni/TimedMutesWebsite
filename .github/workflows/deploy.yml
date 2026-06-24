@@ -1,0 +1,77 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_HOST: ${{ secrets.VITE_API_HOST || 'https://mutes.ripperoni.app/api' }}
+          VITE_BASE_PATH: ${{ secrets.VITE_BASE_PATH || '/ui' }}
+          VITE_API_OZONE_HOST: ${{ secrets.VITE_API_OZONE_HOST || 'https://ozoneswarm.ripperoni.com/api' }}
+          VITE_OAUTH_CLIENT_ID: ${{ secrets.VITE_OAUTH_CLIENT_ID || 'https://mutes.ripperoni.app/ui/client-metadata.json' }}
+          VITE_OAUTH_REDIRECT_URI: ${{ secrets.VITE_OAUTH_REDIRECT_URI || 'https://mutes.ripperoni.app/ui/oauth/callback' }}
+          VITE_OAUTH_SCOPE: ${{ secrets.VITE_OAUTH_SCOPE || 'atproto transition:generic' }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST || '158.69.219.229' }}
+          username: ${{ secrets.SSH_USER || 'ubuntu' }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/timed-mutes-website
+
+            # Pull latest code
+            git fetch origin
+            git reset --hard origin/main
+
+            # Build Docker image with production env vars
+            docker build --no-cache \
+              --build-arg VITE_API_HOST='${{ secrets.VITE_API_HOST || 'https://mutes.ripperoni.app/api' }}' \
+              --build-arg VITE_BASE_PATH='/ui' \
+              --build-arg VITE_API_OZONE_HOST='${{ secrets.VITE_API_OZONE_HOST || 'https://ozoneswarm.ripperoni.com/api' }}' \
+              --build-arg VITE_OAUTH_CLIENT_ID='${{ secrets.VITE_OAUTH_CLIENT_ID || 'https://mutes.ripperoni.app/ui/client-metadata.json' }}' \
+              --build-arg VITE_OAUTH_REDIRECT_URI='${{ secrets.VITE_OAUTH_REDIRECT_URI || 'https://mutes.ripperoni.app/ui/oauth/callback' }}' \
+              --build-arg VITE_OAUTH_SCOPE='${{ secrets.VITE_OAUTH_SCOPE || 'atproto transition:generic' }}' \
+              -t timed-mutes-website .
+
+            # Stop & remove old container
+            docker stop timed-mutes-website 2>/dev/null || true
+            docker rm timed-mutes-website 2>/dev/null || true
+
+            # Start new container
+            docker run -d \
+              --name timed-mutes-website \
+              --restart unless-stopped \
+              -p 3001:80 \
+              timed-mutes-website
+
+            # Verify deployment
+            echo "Waiting for container to start..."
+            sleep 3
+            curl -s -o /dev/null -w "Health check: HTTP %{http_code}\n" http://localhost:3001/ui/ || echo "Warning: Health check failed"

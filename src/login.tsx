@@ -6,6 +6,7 @@ import {getAgentLogin, oauthClient} from "./agent.ts";
 import {
   Box,
   Button,
+  CircularProgress,
   Container,
   Paper,
   TextField,
@@ -32,6 +33,8 @@ function Login({
   const [password, setPassword] = useState("")
   const [emailError, setEmailError] = useState("")
   const [passwordError, setPasswordError] = useState("")
+  const [oauthLoading, setOauthLoading] = useState(false)
+  const [appPasswordLoading, setAppPasswordLoading] = useState(false)
 
   const navigate = useNavigate();
 
@@ -53,6 +56,7 @@ function Login({
       return
     }
 
+    setAppPasswordLoading(true)
     logIn()
   }
 
@@ -66,6 +70,7 @@ function Login({
         const accessJwt = res.session?.accessJwt;
         if (accessJwt === undefined) {
           alert("Invalid login");
+          setAppPasswordLoading(false);
         } else {
           const tokens = accessJwt.split(".");
           const data = JSON.parse(atob(tokens[1]))
@@ -83,39 +88,46 @@ function Login({
                     setHandlename(profile.data.handle)
                     setLoggedIn(true)
                     setEmail(email)
+                    setAppPasswordLoading(false)
                     navigate(import.meta.env.VITE_BASE_PATH)
+                  }).catch(() => {
+                    setAppPasswordLoading(false)
                   })
                 } else {
                   alert("Invalid login")
+                  setAppPasswordLoading(false)
                 }
               })
               .catch(function (error) {
                 alert("Invalid login: " + error.toString())
+                setAppPasswordLoading(false)
               });
           } else {
             alert("Invalid login, please try again with an App Password");
+            setAppPasswordLoading(false);
           }
         }
       }
     ).catch((e) => {
       console.error(e.toString())
       alert("Invalid login");
+      setAppPasswordLoading(false);
     });
   }
 
   const onOAuthClick = async () => {
     try {
       if ("" === email) {
-        // If email is empty, we might want to prompt for a handle if it's required for some OAuth flows,
-        // but typically ATProto OAuth starts with a handle to resolve the PDS.
-        // Some implementations allow starting without it if the client is restricted to one service.
-        await oauthClient.signIn("https://bsky.social");
-      } else {
-        await oauthClient.signIn(email);
+        setEmailError("Please enter your handle to sign in with Bluesky");
+        return;
       }
+      setOauthLoading(true);
+      await oauthClient.signIn(email);
+      // OAuth redirects away, so we don't reset loading here
     } catch (e) {
       console.error(e);
       alert("Failed to initiate OAuth login");
+      setOauthLoading(false);
     }
   }
 
@@ -138,7 +150,8 @@ function Login({
               fullWidth
               variant="contained"
               size="large"
-              startIcon={<SiBluesky/>}
+              disabled={oauthLoading || appPasswordLoading}
+              startIcon={oauthLoading ? <CircularProgress size={20} color="inherit"/> : <SiBluesky/>}
               onClick={onOAuthClick}
               sx={{
                 backgroundColor: '#0085ff',
@@ -149,7 +162,7 @@ function Login({
                 fontWeight: 600
               }}
             >
-              Sign in with Bluesky
+              {oauthLoading ? "Signing in..." : "Sign in with Bluesky"}
             </Button>
 
             <Divider sx={{my: 2}}>
@@ -183,10 +196,11 @@ function Login({
               fullWidth
               variant="outlined"
               size="large"
+              disabled={oauthLoading || appPasswordLoading}
               sx={{mt: 1}}
               onClick={onButtonClick}
             >
-              Log In with App Password
+              {appPasswordLoading ? <CircularProgress size={20} color="inherit"/> : "Log In with App Password"}
             </Button>
 
             <Typography variant="caption" color="text.secondary" sx={{mt: 2}}>

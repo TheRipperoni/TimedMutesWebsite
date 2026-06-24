@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Deployment
+deploy.sh
+
+# Temp/log output
+.output.txt
