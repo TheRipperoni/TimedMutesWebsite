@@ -39,17 +39,28 @@ function App() {
         };
 
         setAgent(agent);
+
+        // Fetch the profile to get the user's handle, then create a backend session
+        try {
+          const profile = await agent.getProfile({actor: oauthSession.sub});
+          if (profile.success) {
+            const handle = profile.data.handle;
+            setHandlename(handle);
+            setPfpUrl(profile.data.avatar || "");
+
+            // Create a backend session so subsequent API calls are authenticated
+            await fetch(import.meta.env.VITE_API_HOST + '/session', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({did: oauthSession.sub, handle}),
+            });
+          }
+        } catch (err) {
+          console.error('Failed to setup session after OAuth init:', err);
+        }
+
         setLoggedIn(true);
 
-        agent.getProfile({actor: oauthSession.sub}).then((profile) => {
-          if (profile.success) {
-            setHandlename(profile.data.handle);
-            setPfpUrl(profile.data.avatar || "");
-          }
-        }).catch((err) => {
-          console.error('Failed to fetch profile after OAuth init:', err);
-        });
-        
         // If we just finished a login, we might want to clear the URL parameters
         if (res.state) {
            window.history.replaceState({}, document.title, window.location.pathname);
